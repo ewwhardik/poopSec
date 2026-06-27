@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>poopSec — Web Security Scanner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#e5000a;--red2:#ff0010;--red3:#ff3333;
+  --white:#f0f0f0;--gray:#777;--dg:#3a3a3a;
+  --bg:#060608;--s1:#0f0f12;--s2:#161619;--s3:#1c1c20;
+  --bd:#222226;--bdr:#2a0003;
+  --glow-red:rgba(229,0,10,0.6);
+  --glow-dim:rgba(229,0,10,0.15);
+}
+body{background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--red);border-radius:2px;}
+
+/* ── NAV ── */
+nav{background:rgba(6,6,8,0.85);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-bottom:1px solid var(--bdr);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:200;}
+.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem;letter-spacing:-1px;display:flex;align-items:center;gap:8px;color:var(--white);}
+.logo em{color:var(--red);font-style:normal;text-shadow:0 0 20px rgba(229,0,10,.8);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pdot 2s infinite;}
+@keyframes pdot{0%,100%{box-shadow:0 0 0 0 rgba(229,0,10,.8);}60%{box-shadow:0 0 0 8px rgba(229,0,10,0);}}
+.nav-links{display:flex;gap:1.8rem;list-style:none;}
+.nav-links a{color:var(--gray);text-decoration:none;font-size:.8rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;transition:color .2s;cursor:pointer;}
+.nav-links a:hover{color:var(--red);}
+
+/* ── HERO ── */
+.hero{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2rem;max-width:1100px;margin:0 auto;padding:4rem 2rem 3rem;position:relative;}
+.hero-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(229,0,10,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(229,0,10,.04) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 70% 80% at 30% 50%,black,transparent);pointer-events:none;}
+.hero-left{position:relative;z-index:1;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(229,0,10,.08);border:1px solid var(--bdr);color:var(--red);padding:5px 14px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-bottom:1.5rem;letter-spacing:.1em;}
+.hero-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.2s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+.hero h1{font-size:clamp(2.2rem,5vw,4rem);font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:1rem;}
+.hero h1 em{color:var(--red);font-style:normal;text-shadow:0 0 60px rgba(229,0,10,.4);}
+.hero-sub{color:var(--gray);font-size:.95rem;line-height:1.7;max-width:480px;margin-bottom:2rem;}
+.btn-primary{background:var(--red);color:#fff;border:none;padding:13px 30px;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;letter-spacing:.02em;}
+.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(45deg,transparent 30%,rgba(255,255,255,.12) 50%,transparent 70%);transform:translateX(-100%);transition:transform .5s;}
+.btn-primary:hover::after{transform:translateX(100%);}
+.btn-primary:hover{background:var(--red2);box-shadow:0 0 40px rgba(229,0,10,.5),0 4px 24px rgba(0,0,0,.4);transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+/* ── GLOBE WRAPPER ── */
+.globe-wrap{width:320px;height:320px;flex-shrink:0;position:relative;perspective:1000px;}
+#globe-canvas{border-radius:50%;display:block;filter:drop-shadow(0 0 30px rgba(229,0,10,.25));}
+.globe-ring{position:absolute;inset:-12px;border-radius:50%;border:1px solid rgba(229,0,10,.2);animation:spin-slow 18s linear infinite;box-shadow:0 0 15px rgba(229,0,10,.05) inset;}
+.globe-ring2{position:absolute;inset:-26px;border-radius:50%;border:1px dashed rgba(229,0,10,.08);animation:spin-slow 32s linear infinite reverse;}
+.globe-ring3{position:absolute;inset:-44px;border-radius:50%;border:1px solid rgba(229,0,10,.04);animation:spin-slow 50s linear infinite;}
+@keyframes spin-slow{to{transform:rotate(360deg);}}
+.globe-glow{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 80px rgba(229,0,10,.15),inset 0 0 60px rgba(0,0,0,.5);pointer-events:none;}
+.globe-scan-line{position:absolute;left:10px;right:10px;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(229,0,10,.6),transparent);transform:translateY(-50%);animation:globe-scan 3s ease-in-out infinite;border-radius:1px;box-shadow:0 0 8px rgba(229,0,10,.5);}
+@keyframes globe-scan{0%,100%{top:10%;opacity:0;}5%{opacity:1;}50%{top:90%;opacity:.8;}95%{opacity:1;}99%{top:10%;opacity:0;}}
+.atk-badge{position:absolute;font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;background:rgba(229,0,10,.9);color:#fff;padding:2px 6px;border-radius:4px;pointer-events:none;white-space:nowrap;opacity:0;transform:scale(.7);transition:opacity .3s,transform .3s;letter-spacing:.04em;box-shadow:0 2px 8px rgba(229,0,10,.4);}
+
+/* ── SCANNER SECTION ── */
+.section{max-width:1100px;margin:0 auto;padding:3rem 2rem;}
+.sec-label{font-size:.68rem;font-weight:700;letter-spacing:.15em;color:var(--dg);font-family:'JetBrains Mono',monospace;text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:10px;}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--bd);}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--red),transparent);}
+.card-pad{padding:2rem;}
+
+.input-row{display:flex;gap:10px;margin-bottom:1.2rem;}
+.url-inp{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:9px;padding:13px 16px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:.88rem;outline:none;transition:border-color .3s,box-shadow .3s;min-width:0;}
+.url-inp:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(229,0,10,.1),0 0 25px rgba(229,0,10,.07);}
+.url-inp::placeholder{color:var(--dg);}
+.opts{display:flex;gap:8px;flex-wrap:wrap;}
+.opt{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--gray);font-size:.75rem;transition:all .2s;user-select:none;}
+.opt.on{background:rgba(229,0,10,.07);border-color:var(--bdr);color:var(--red);}
+
+/* ── LOADING ── */
+#load{display:none;padding:3rem 0;text-align:center;position:relative;}
+#load::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 50%,rgba(229,0,10,.03),transparent);pointer-events:none;}
+.spinner-wrap{position:relative;width:64px;height:64px;margin:0 auto 1.4rem;}
+.spinner{width:64px;height:64px;border-radius:50%;border:2px solid var(--bd);border-top-color:var(--red);animation:spin .65s linear infinite;}
+.spinner-inner{position:absolute;inset:10px;border-radius:50%;border:1px solid transparent;border-bottom-color:rgba(229,0,10,.4);animation:spin .9s linear infinite reverse;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.load-msg{font-family:'JetBrains Mono',monospace;color:var(--red);font-size:.85rem;margin-bottom:1rem;min-height:1.2em;transition:opacity .2s;}
+.prog-wrap{height:3px;background:var(--bd);border-radius:3px;max-width:420px;margin:0 auto .8rem;overflow:hidden;position:relative;}
+.prog{height:100%;background:linear-gradient(90deg,var(--red),var(--red3));border-radius:3px;width:0%;transition:width .4s ease;box-shadow:0 0 12px var(--red),0 0 24px rgba(229,0,10,.3);}
+.prog::after{content:'';position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,transparent,rgba(255,80,80,.4));border-radius:3px;}
+.load-steps{display:flex;flex-direction:column;gap:5px;max-width:380px;margin:0 auto;}
+.ls{display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--dg);font-family:'JetBrains Mono',monospace;transition:color .3s,transform .2s;}
+.ls.done{color:var(--gray);}.ls.act{color:var(--red);transform:translateX(4px);}
+.ls-ic{width:14px;text-align:center;font-size:.7rem;}
+
+/* ── RESULTS ── */
+#res{display:none;}
+.score-hero{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:2rem;display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;margin-bottom:1.5rem;position:relative;overflow:hidden;}
+.score-hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 100% at 0 50%,rgba(229,0,10,.05),transparent);pointer-events:none;}
+.ring-wrap{position:relative;width:120px;height:120px;flex-shrink:0;}
+.ring-wrap svg{transform:rotate(-90deg);}
+.rb{fill:none;stroke:var(--bd);stroke-width:6;}
+.rf{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1),stroke .5s;}
+.rn{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.rn-big{font-size:1.9rem;font-weight:900;line-height:1;}
+.rn-lbl{font-size:.65rem;color:var(--gray);font-family:'JetBrains Mono',monospace;}
+.grade{font-size:4rem;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1;}
+.score-info{flex:1;min-width:180px;}
+.score-info h2{font-size:1.3rem;font-weight:700;margin-bottom:.4rem;}
+.score-info p{color:var(--gray);font-size:.85rem;line-height:1.6;margin-bottom:.8rem;}
+.pills{display:flex;gap:6px;flex-wrap:wrap;}
+.pill{padding:3px 10px;border-radius:100px;font-size:.7rem;font-weight:700;}
+.p-c{background:rgba(229,0,10,.12);color:#ff5555;border:1px solid rgba(229,0,10,.25);}
+.p-h{background:rgba(255,100,0,.1);color:#ff6600;border:1px solid rgba(255,100,0,.2);}
+.p-m{background:rgba(255,200,0,.1);color:#ffc400;border:1px solid rgba(255,200,0,.2);}
+.p-l{background:rgba(0,200,100,.08);color:#00c864;border:1px solid rgba(0,200,100,.15);}
+.p-p{background:rgba(0,180,80,.08);color:#00b450;border:1px solid rgba(0,180,80,.15);}
+
+.action-row{display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;}
+.btn-sec{background:rgba(255,255,255,.04);border:1px solid var(--bd);color:var(--gray);padding:8px 16px;border-radius:8px;font-size:.78rem;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.btn-sec:hover{background:rgba(255,255,255,.08);color:var(--white);border-color:var(--dg);}
+
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:1.5rem;}
+.sum-c{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:1.1rem;position:relative;overflow:hidden;transition:transform .2s;}
+.sum-c:hover{transform:translateY(-2px);}
+.sum-c::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.sum-c.rc::before{background:linear-gradient(90deg,transparent,var(--red),transparent);}
+.sum-c.oc::before{background:linear-gradient(90deg,transparent,#ff6600,transparent);}
+.sum-c.yc::before{background:linear-gradient(90deg,transparent,#ffc400,transparent);}
+.sum-c.gc::before{background:linear-gradient(90deg,transparent,#00c864,transparent);}
+.sum-n{font-size:1.8rem;font-weight:900;line-height:1;margin-bottom:3px;}
+.sum-d{font-size:.72rem;color:var(--gray);}
+
+.tabs{display:flex;gap:3px;border-bottom:1px solid var(--bd);margin-bottom:1.5rem;flex-wrap:wrap;}
+.tab{padding:9px 18px;cursor:pointer;color:var(--gray);font-size:.8rem;font-weight:500;border:none;border-bottom:2px solid transparent;background:none;font-family:'Inter',sans-serif;transition:all .2s;}
+.tab:hover{color:var(--white);}
+.tab.act{color:var(--red);border-bottom-color:var(--red);}
+.tc{display:none;}.tc.act{display:block;}
+
+.findings{display:flex;flex-direction:column;gap:10px;}
+.fnd{background:var(--s1);border:1px solid var(--bd);border-radius:11px;overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s;}
+.fnd:hover{border-color:var(--dg);transform:translateX(2px);}
+.fnd.open .fb{display:block;}.fnd.open .chev{transform:rotate(180deg);}
+.fh{display:flex;align-items:center;gap:10px;padding:12px 16px;}
+.sb{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sc{background:#e5000a;box-shadow:0 0 6px #e5000a;}.sh{background:#ff6600;box-shadow:0 0 6px #ff6600;}.sm{background:#ffc400;}.sl{background:#00c864;}.si{background:var(--dg);}.sp{background:#00b450;}
+.ft{flex:1;font-size:.85rem;font-weight:500;}
+.sl2{font-size:.67rem;font-weight:700;letter-spacing:.07em;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:4px;}
+.lc{background:rgba(229,0,10,.1);color:#ff5555;}.lh{background:rgba(255,100,0,.1);color:#ff6600;}.lm{background:rgba(255,200,0,.1);color:#ffc400;}.ll{background:rgba(0,200,100,.08);color:#00c864;}.li{background:rgba(100,100,100,.1);color:#777;}.lp{background:rgba(0,180,80,.08);color:#00b450;}
+.chev{color:var(--dg);transition:transform .2s;flex-shrink:0;font-size:.9rem;}
+.fb{display:none;padding:0 16px 16px;border-top:1px solid var(--bd);padding-top:13px;}
+.fd{font-size:.82rem;color:var(--gray);line-height:1.6;margin-bottom:.8rem;}
+.fl{font-size:.67rem;font-weight:700;letter-spacing:.1em;color:var(--dg);font-family:'JetBrains Mono',monospace;margin-bottom:5px;text-transform:uppercase;}
+.fv{font-family:'JetBrains Mono',monospace;font-size:.75rem;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:6px;padding:9px 11px;color:var(--white);word-break:break-all;line-height:1.5;margin-bottom:.8rem;}
+.ff{font-size:.82rem;color:var(--gray);line-height:1.6;background:rgba(0,200,100,.03);border:1px solid rgba(0,200,100,.1);border-radius:6px;padding:10px 13px;}
+.ff strong{color:#00c864;font-weight:600;}
+code{font-family:'JetBrains Mono',monospace;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:3px;font-size:.85em;}
+
+/* ── TECH ── */
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.tech-item{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:border-color .2s;}
+.tech-item:hover{border-color:var(--dg);}
+.tech-icon{width:32px;height:32px;border-radius:8px;background:rgba(229,0,10,.08);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.tech-name{font-size:.8rem;font-weight:600;color:var(--white);}
+.tech-cat{font-size:.68rem;color:var(--gray);}
+
+/* ── CHART ── */
+.chart-wrap{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:1.5rem;margin-bottom:1rem;}
+.chart-title{font-size:.75rem;font-weight:600;letter-spacing:.05em;color:var(--gray);margin-bottom:1rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;}
+.bar-chart{display:flex;flex-direction:column;gap:8px;}
+.bc-row{display:flex;align-items:center;gap:10px;}
+.bc-label{font-size:.72rem;color:var(--gray);font-family:'JetBrains Mono',monospace;width:80px;text-align:right;flex-shrink:0;}
+.bc-track{flex:1;height:8px;background:var(--bd);border-radius:4px;overflow:hidden;}
+.bc-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1);}
+.bc-val{font-size:.7rem;color:var(--gray);width:24px;font-family:'JetBrains Mono',monospace;}
+
+/* ── HISTORY ── */
+.hist-list{display:flex;flex-direction:column;gap:8px;}
+.hist-item{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .2s,transform .15s;}
+.hist-item:hover{border-color:var(--dg);transform:translateX(2px);}
+.hist-grade{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+.hist-info{flex:1;min-width:0;}
+.hist-url{font-size:.82rem;font-weight:500;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-time{font-size:.7rem;color:var(--gray);font-family:'JetBrains Mono',monospace;}
+.hist-score{font-size:1rem;font-weight:700;font-family:'JetBrains Mono',monospace;}
+
+/* ── AUTO-FIX ── */
+.fix-section{margin-bottom:1rem;}
+.fix-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;}
+.fix-title{font-size:.8rem;font-weight:600;color:var(--white);}
+.fix-code{font-family:'JetBrains Mono',monospace;font-size:.73rem;background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:8px;padding:14px;color:#a0d0a0;line-height:1.7;white-space:pre;overflow-x:auto;}
+
+/* ── COOKIE TABLE ── */
+.ctable{width:100%;border-collapse:collapse;font-size:.78rem;font-family:'JetBrains Mono',monospace;}
+.ctable th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--bd);color:var(--dg);font-size:.67rem;letter-spacing:.08em;}
+.ctable td{padding:8px 12px;border-bottom:1px solid rgba(34,34,38,.5);color:var(--gray);word-break:break-all;}
+.ctable tr:last-child td{border-bottom:none;}
+.ct-n{color:var(--white)!important;font-weight:500;}
+.ct-ok{color:#00b450!important;}.ct-bad{color:#ff5555!important;}.ct-miss{color:#777!important;}
+
+/* ── DNS ── */
+.dns-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(34,34,38,.5);}
+.dns-row:last-child{border-bottom:none;}
+.dns-name{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--white);font-weight:500;width:80px;flex-shrink:0;}
+.dns-val{flex:1;font-family:'JetBrains Mono',monospace;font-size:.73rem;color:var(--gray);word-break:break-all;}
+.dns-stat{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:4px;flex-shrink:0;}
+.ds-ok{background:rgba(0,180,80,.1);color:#00b450;}.ds-bad{background:rgba(229,0,10,.1);color:#ff5555;}.ds-na{background:rgba(100,100,100,.1);color:#777;}
+
+/* ── ABOUT ── */
+.about-wrap{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:2.5rem;max-width:800px;margin:0 auto;position:relative;overflow:hidden;}
+.about-wrap::before{content:'';position:absolute;top:-40%;right:-20%;width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(229,0,10,.05),transparent 70%);pointer-events:none;}
+.alogo{font-family:'JetBrains Mono',monospace;font-size:2.2rem;font-weight:700;margin-bottom:.3rem;}
+.alogo em{color:var(--red);font-style:normal;}
+.atag{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--gray);letter-spacing:.15em;text-transform:uppercase;margin-bottom:1.8rem;}
+.atext{color:var(--gray);line-height:1.8;font-size:.9rem;margin-bottom:1rem;}
+.atext strong{color:var(--white);}
+.adiv{border:none;border-top:1px solid var(--bd);margin:1.8rem 0;}
+.ameta{display:flex;gap:2rem;flex-wrap:wrap;}
+.am-item .am-l{font-size:.68rem;color:var(--dg);font-family:'JetBrains Mono',monospace;letter-spacing:.08em;margin-bottom:3px;text-transform:uppercase;}
+.am-item .am-v{font-size:.85rem;font-weight:600;color:var(--white);}
+.aorg{display:inline-block;margin-top:1.2rem;background:rgba(229,0,10,.07);border:1px solid var(--bdr);padding:7px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--red);}
+
+/* ── ERROR ── */
+.err-box{background:rgba(229,0,10,.05);border:1px solid rgba(229,0,10,.2);border-radius:9px;padding:1rem 1.2rem;color:#ff7777;font-size:.82rem;display:flex;gap:9px;align-items:flex-start;margin-bottom:.8rem;}
+
+footer{text-align:center;padding:2rem;border-top:1px solid var(--bd);font-size:.73rem;color:var(--dg);font-family:'JetBrains Mono',monospace;}
+footer a{color:var(--red);text-decoration:none;}
+
+/* ── ANIMATIONS ── */
+.fade{animation:fin .4s ease forwards;}
+@keyframes fin{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── SCAN FLASH OVERLAY ── */
+.scan-flash{position:fixed;inset:0;background:rgba(229,0,10,.03);pointer-events:none;z-index:999;opacity:0;transition:opacity .2s;}
+.scan-flash.on{opacity:1;}
+
+/* ── PARTICLE EFFECTS (attack lines on globe) ── */
+@keyframes atk-pulse{0%{opacity:0;transform:scale(.5);}30%{opacity:1;transform:scale(1);}70%{opacity:.7;}100%{opacity:0;transform:scale(1.3);}}
+.atk-spark{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--red);pointer-events:none;animation:atk-pulse .6s forwards;}
+</style>
+</head>
+<body>
+
+<div class="scan-flash" id="scan-flash"></div>
+
+<nav>
+  <div class="logo"><div class="dot"></div>poop<em>Organization</em></div>
+  <ul class="nav-links">
+    <li><a onclick="gs('scan-sec')">Scanner</a></li>
+    <li><a onclick="gs('hist-sec')">History</a></li>
+    <li><a onclick="gs('about-sec')">About</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-left">
+    <div class="hero-badge">v1.4 &nbsp;·&nbsp; ADVANCE &nbsp;·&nbsp; FREE</div>
+    <h1>poop<em>Sec</em><br><span style="font-size:.4em;color:var(--gray);font-weight:400;letter-spacing:0;">web security scanner — no cap</span></h1>
+    <p class="hero-sub">we scan your site's security headers, fingerprint the tech stack, audit cookies, check DNS records, and give you a ready-to-paste fix config. all free, all in your browser.</p>
+    <button class="btn-primary" onclick="gs('scan-sec')">Start scanning →</button>
+  </div>
+  <div class="globe-wrap" id="globe-wrap">
+    <canvas id="globe-canvas" width="320" height="320"></canvas>
+    <div class="globe-ring"></div>
+    <div class="globe-ring2"></div>
+    <div class="globe-ring3"></div>
+    <div class="globe-glow"></div>
+    <div class="globe-scan-line"></div>
+  </div>
+</div>
+
+<div class="section" id="scan-sec">
+  <div class="sec-label">// scanner</div>
+  <div class="card card-pad">
+    <div id="err-wrap"></div>
+    <div class="input-row">
+      <input class="url-inp" id="url-in" type="url" placeholder="https://example.com">
+      <button class="btn-primary" id="scan-btn" onclick="startScan()">⚡ Scan</button>
+    </div>
+    <div class="opts" id="opts-row">
+      <label class="opt on" onclick="tog(this)" id="opt-headers"><input type="checkbox" checked> 🛡 Headers</label>
+      <label class="opt on" onclick="tog(this)" id="opt-infoleak"><input type="checkbox" checked> 🔍 Info Leak</label>
+      <label class="opt on" onclick="tog(this)" id="opt-cookies"><input type="checkbox" checked> 🍪 Cookies</label>
+      <label class="opt on" onclick="tog(this)" id="opt-https"><input type="checkbox" checked> 🔒 HTTPS</label>
+      <label class="opt on" onclick="tog(this)" id="opt-techid"><input type="checkbox" checked> 🧬 Tech ID</label>
+      <label class="opt on" onclick="tog(this)" id="opt-dns"><input type="checkbox" checked> 🌐 DNS</label>
+      <label class="opt on" onclick="tog(this)" id="opt-redirect"><input type="checkbox" checked> 🔄 Redirects</label>
+      <label class="opt on" onclick="tog(this)" id="opt-sri"><input type="checkbox" checked> 🔐 SRI Check</label>
+      <label class="opt on" onclick="tog(this)" id="opt-ports"><input type="checkbox" checked> 🚪 Open Ports</label>
+    </div>
+  </div>
+
+  <div id="load">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <div class="spinner-inner"></div>
+    </div>
+    <div class="load-msg" id="lmsg">initializing scanner...</div>
+    <div class="prog-wrap"><div class="prog" id="prog"></div></div>
+    <div class="load-steps" id="lsteps"></div>
+  </div>
+
+  <div id="res"></div>
+</div>
+
+<div class="section" id="hist-sec">
+  <div class="sec-label">// scan history</div>
+  <div class="card card-pad" id="hist-wrap">
+    <p style="color:var(--gray);font-size:.85rem;">no scans yet — run your first scan above and results will show up here.</p>
+  </div>
+</div>
+
+<div class="section" id="about-sec">
+  <div class="sec-label">// about</div>
+  <div class="about-wrap">
+    <div class="alogo">poop<em>Sec</em></div>
+    <div class="atag">Web Security Scanner · Made with chaos &amp; caffeine · v1.4</div>
+    <p class="atext"><strong>poopSec</strong> is a free, zero-BS web security scanner built because most security tools out there are too expensive, too complicated, or just plain boring. we wanted something that tells you what's actually wrong — in plain english — and helps you fix it without making you feel like an idiot.</p>
+    <p class="atext">it checks security headers, fingerprints your tech stack, audits cookie flags, checks DNS email security records (SPF, DMARC), detects information leakage, scans for SRI (Subresource Integrity) on external scripts, checks for mixed content, probes exposed subdomains, and generates a ready-to-paste nginx/Apache/Express config to fix everything. all client-side, all private — we literally can't see your scans.</p>
+    <p class="atext">think of it as a brutally honest friend who happens to know a lot about web security and won't charge you $500/month for it.</p>
+    <hr class="adiv">
+    <div class="ameta">
+      <div class="am-item"><div class="am-l">Made by</div><div class="am-v">Hardik</div></div>
+      <div class="am-item"><div class="am-l">Produced by</div><div class="am-v">poop Organization</div></div>
+      <div class="am-item"><div class="am-l">Based in</div><div class="am-v">India 🇮🇳</div></div>
+      <div class="am-item"><div class="am-l">Version</div><div class="am-v">1.4.1</div></div>
+      <div class="am-item"><div class="am-l">License</div><div class="am-v">Free forever</div></div>
+    </div>
+    <div class="aorg">🏢 poop Organization — India · Built for the people</div>
+  </div>
+</div>
+
+<footer>
+  <p>poopSec v1.4 · made by <a href="#">Hardik</a> · produced by poop Organization, India · 2026</p>
+  <p style="margin-top:5px;font-size:.68rem;">everything runs in your browser. we store nothing. no tracking. no bs.</p>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   GLOBE — 3D with depth shading, attack effects, arcs
+   ═══════════════════════════════════════════════════ */
+(function(){
+  const cv = document.getElementById('globe-canvas');
+  const ctx = cv.getContext('2d');
+  const W = 320, R = 130, cx = 160, cy = 160;
+  let rot = 0, tilt = 0.18; // slight axial tilt for 3D feel
+  let nodes = [], conns = [], attacks = [], scanPulses = [], arcs = [];
+  let globeScanY = -R, globeScanDir = 1;
+  let frameCount = 0;
+
+  // Generate nodes (cities)
+  for (let i = 0; i < 160; i++) {
+    // cluster towards populated areas roughly
+    const lat = (Math.random() - .5) * Math.PI;
+    const lng = Math.random() * Math.PI * 2;
+    nodes.push({
+      lat, lng,
+      size: Math.random() > .93 ? 3 : Math.random() > .75 ? 1.8 : 0.9,
+      col: Math.random() > .96 ? 'atk' : Math.random() > .82 ? 'hot' : 'dim',
+      pulse: Math.random() > .9 ? { t: Math.random() * Math.PI * 2, spd: .04 + Math.random() * .03 } : null
+    });
+  }
+
+  // Fixed connections
+  for (let i = 0; i < 22; i++) {
+    const a = Math.floor(Math.random() * nodes.length);
+    const b = Math.floor(Math.random() * nodes.length);
+    const dist = Math.abs(nodes[a].lat - nodes[b].lat) + Math.abs(nodes[a].lng - nodes[b].lng);
+    if (dist < 2.5) conns.push({ a, b, alpha: .15 + Math.random() * .2, atk: Math.random() > .85 });
+  }
+
+  // Project 3D point on sphere to 2D canvas with tilt
+  function project(lat, lng) {
+    // Apply axial tilt (rotate around X)
+    const cosT = Math.cos(tilt), sinT = Math.sin(tilt);
+    const x0 = R * Math.cos(lat) * Math.sin(lng + rot);
+    const y0 = R * Math.sin(lat);
+    const z0 = R * Math.cos(lat) * Math.cos(lng + rot);
+    // Tilt the Y and Z
+    const y1 = y0 * cosT - z0 * sinT;
+    const z1 = y0 * sinT + z0 * cosT;
+    // Perspective division for depth feel
+    const persp = 1 + z1 / (R * 3.5);
+    const px = cx + x0 * persp;
+    const py = cy - y1 * persp;
+    return { x: px, y: py, z: z1, depth: (z1 + R) / (2 * R), visible: z1 > -R * .1 };
+  }
+
+  function projectRaw(lat, lng) {
+    return project(lat, lng);
+  }
+
+  // Great-circle arc between two points
+  function drawArc(a, b, color, progress, width) {
+    const steps = 40;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= steps * progress; i++) {
+      const t = i / steps;
+      // Interpolate via slerp-ish on sphere
+      const lat = a.lat + (b.lat - a.lat) * t;
+      const lng = a.lng + (b.lng - a.lng) * t;
+      // Arc lifts mid-point above sphere surface
+      const lift = Math.sin(t * Math.PI) * .22;
+      const liftedR = R * (1 + lift);
+      const p = projectRaw(lat, lng);
+      const lx = cx + (p.x - cx) * (liftedR / R);
+      const ly = cy + (p.y - cy) * (liftedR / R);
+      if (p.visible) {
+        if (!started) { ctx.moveTo(lx, ly); started = true; }
+        else ctx.lineTo(lx, ly);
+      } else { started = false; }
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width || 0.8;
+    ctx.stroke();
+  }
+
+  // Launch an attack arc from node A to node B
+  function spawnAttack() {
+    if (nodes.length < 2) return;
+    const srcI = Math.floor(Math.random() * nodes.length);
+    let dstI;
+    do { dstI = Math.floor(Math.random() * nodes.length); } while (dstI === srcI);
+    arcs.push({
+      src: nodes[srcI], dst: nodes[dstI],
+      progress: 0, spd: .004 + Math.random() * .006,
+      color: Math.random() > .5 ? 'rgba(229,0,10,0.7)' : 'rgba(255,80,0,0.5)',
+      width: .6 + Math.random() * .8,
+      done: false
+    });
+  }
+
+  // Spawn attack badge on globe wrapper
+  function spawnAtkBadge() {
+    const labels = ['SYN FLOOD', 'BRUTE FORCE', 'XSS PROBE', 'SQLI SCAN', 'PORT SCAN', 'DDOS', 'MITM', 'RECON', 'CVE PROBE', 'RCE TEST'];
+    const wrap = document.getElementById('globe-wrap');
+    const badge = document.createElement('div');
+    badge.className = 'atk-badge';
+    badge.textContent = labels[Math.floor(Math.random() * labels.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 105 + Math.random() * 55;
+    const bx = 160 + Math.cos(angle) * dist;
+    const by = 160 + Math.sin(angle) * dist;
+    badge.style.left = bx + 'px';
+    badge.style.top = by + 'px';
+    wrap.appendChild(badge);
+    requestAnimationFrame(() => { badge.style.opacity = '1'; badge.style.transform = 'scale(1)'; });
+    setTimeout(() => { badge.style.opacity = '0'; badge.style.transform = 'scale(.6)'; }, 1200);
+    setTimeout(() => badge.remove(), 1600);
+  }
+
+  // Scan ripple pulse on node
+  function spawnPulse(node) {
+    scanPulses.push({ node, r: 0, maxR: 18, alpha: .7, done: false });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, W);
+    frameCount++;
+
+    /* ── Base sphere gradient (3D depth) ── */
+    const grd = ctx.createRadialGradient(cx - R * .28, cy - R * .22, R * .05, cx, cy, R);
+    grd.addColorStop(0, 'rgba(60,0,0,0.18)');
+    grd.addColorStop(.35, 'rgba(15,0,0,0.35)');
+    grd.addColorStop(.7, 'rgba(0,0,0,0.5)');
+    grd.addColorStop(1, 'rgba(0,0,0,0.88)');
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = grd; ctx.fill();
+
+    /* ── Specular highlight (makes it look 3D sphere) ── */
+    const spec = ctx.createRadialGradient(cx - R * .38, cy - R * .32, 1, cx - R * .3, cy - R * .25, R * .55);
+    spec.addColorStop(0, 'rgba(255,180,160,0.10)');
+    spec.addColorStop(.4, 'rgba(229,0,10,0.04)');
+    spec.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = spec; ctx.fill();
+
+    /* ── Latitude lines ── */
+    for (let lat = -Math.PI / 2; lat <= Math.PI / 2; lat += Math.PI / 9) {
+      ctx.beginPath(); let first = true;
+      for (let lng = 0; lng <= Math.PI * 2; lng += 0.04) {
+        const p = project(lat, lng);
+        if (p.visible) {
+          const alpha = 0.04 + p.depth * 0.08;
+          if (first) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+          first = false;
+        } else { first = true; }
+      }
+      ctx.strokeStyle = 'rgba(229,0,10,0.10)'; ctx.lineWidth = 0.5; ctx.stroke();
+    }
+
+    /* ── Longitude lines ── */
+    for (let lng = 0; lng < Math.PI * 2; lng += Math.PI / 9) {
+      ctx.beginPath(); let first = true;
+      for (let lat = -Math.PI / 2; lat <= Math.PI / 2; lat += 0.04) {
+        const p = project(lat, lng);
+        if (p.visible) {
+          if (first) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+          first = false;
+        } else { first = true; }
+      }
+      ctx.strokeStyle = 'rgba(229,0,10,0.07)'; ctx.lineWidth = 0.5; ctx.stroke();
+    }
+
+    /* ── Connection lines ── */
+    conns.forEach(c => {
+      const a = project(nodes[c.a].lat, nodes[c.a].lng);
+      const b = project(nodes[c.b].lat, nodes[c.b].lng);
+      if (a.visible && b.visible) {
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+        const baseAlpha = c.atk ? 0.35 : c.alpha;
+        const depthAlpha = baseAlpha * ((a.depth + b.depth) / 2);
+        ctx.strokeStyle = c.atk ? `rgba(229,0,10,${depthAlpha})` : `rgba(180,180,255,${depthAlpha * .5})`;
+        ctx.lineWidth = c.atk ? 0.8 : 0.5;
+        ctx.stroke();
+      }
+    });
+
+    /* ── Attack arcs ── */
+    arcs = arcs.filter(arc => !arc.done);
+    arcs.forEach(arc => {
+      arc.progress = Math.min(1, arc.progress + arc.spd);
+      if (arc.progress >= 1) arc.done = true;
+      drawArc(arc.src, arc.dst, arc.color, arc.progress, arc.width);
+      // Draw a bright dot at the head
+      if (arc.progress < 1) {
+        const t = arc.progress;
+        const lat = arc.src.lat + (arc.dst.lat - arc.src.lat) * t;
+        const lng = arc.src.lng + (arc.dst.lng - arc.src.lng) * t;
+        const lift = Math.sin(t * Math.PI) * .22;
+        const liftedR = R * (1 + lift);
+        const p = project(lat, lng);
+        const lx = cx + (p.x - cx) * (liftedR / R);
+        const ly = cy + (p.y - cy) * (liftedR / R);
+        if (p.visible) {
+          ctx.beginPath(); ctx.arc(lx, ly, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = arc.color.replace('0.7)', '1)').replace('0.5)', '1)');
+          ctx.shadowColor = '#e5000a'; ctx.shadowBlur = 8;
+          ctx.fill(); ctx.shadowBlur = 0;
+        }
+      }
+    });
+
+    /* ── Scan ripple pulses ── */
+    scanPulses = scanPulses.filter(p => !p.done);
+    scanPulses.forEach(p => {
+      const pt = project(p.node.lat, p.node.lng);
+      if (pt.visible) {
+        p.r += 0.5;
+        p.alpha -= 0.022;
+        if (p.alpha <= 0 || p.r >= p.maxR) { p.done = true; return; }
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, p.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(229,0,10,${p.alpha})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    });
+
+    /* ── Nodes ── */
+    nodes.forEach(n => {
+      const p = project(n.lat, n.lng);
+      if (!p.visible) return;
+      const depth = p.depth;
+      let r = n.size * (0.6 + depth * .7); // depth-scale nodes
+
+      if (n.pulse) {
+        n.pulse.t += n.pulse.spd;
+        r += Math.sin(n.pulse.t) * .4;
+      }
+
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+
+      if (n.col === 'atk') {
+        ctx.fillStyle = `rgba(229,0,10,${0.5 + depth * .5})`;
+        ctx.shadowColor = '#ff0010'; ctx.shadowBlur = 10 * depth;
+      } else if (n.col === 'hot') {
+        ctx.fillStyle = `rgba(220,180,180,${0.2 + depth * .5})`;
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.fillStyle = `rgba(140,140,160,${0.1 + depth * .35})`;
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill(); ctx.shadowBlur = 0;
+    });
+
+    /* ── Outer edge shadow (3D depth rim) ── */
+    const rimG = ctx.createRadialGradient(cx, cy, R * .72, cx, cy, R);
+    rimG.addColorStop(0, 'rgba(0,0,0,0)');
+    rimG.addColorStop(.75, 'rgba(0,0,0,.35)');
+    rimG.addColorStop(1, 'rgba(0,0,0,.82)');
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = rimG; ctx.fill();
+
+    /* ── Subtle atmosphere glow on limb ── */
+    const atmo = ctx.createRadialGradient(cx, cy, R * .92, cx, cy, R * 1.08);
+    atmo.addColorStop(0, 'rgba(229,0,10,0.05)');
+    atmo.addColorStop(.5, 'rgba(229,0,10,0.02)');
+    atmo.addColorStop(1, 'rgba(229,0,10,0)');
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.08, 0, Math.PI * 2);
+    ctx.fillStyle = atmo; ctx.fill();
+
+    /* ── Clip to circle (clean edge) ── */
+    // (canvas is already rounded via CSS border-radius)
+
+    rot += 0.0025;
+
+    // Spawn attacks periodically
+    if (frameCount % 90 === 0) spawnAttack();
+    if (frameCount % 70 === 1) {
+      const rn = nodes[Math.floor(Math.random() * nodes.length)];
+      if (rn) spawnPulse(rn);
+    }
+    if (frameCount % 180 === 0) spawnAtkBadge();
+
+    requestAnimationFrame(draw);
+  }
+
+  // Initial attacks
+  for (let i = 0; i < 3; i++) setTimeout(spawnAttack, i * 400);
+  draw();
+})();
+
+/* ═══════════════════════════════════════════════════
+   SCANNER LOGIC
+   ═══════════════════════════════════════════════════ */
+const PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?',
+  'https://thingproxy.freeboard.io/fetch/'
+];
+const MSGS = [
+  'initializing scanner...',
+  'establishing connection...',
+  'fetching response headers...',
+  'analyzing security config...',
+  'checking for info leaks...',
+  'fingerprinting tech stack...',
+  'auditing cookies...',
+  'querying DNS records...',
+  'probing exposed subdomains...',
+  'calculating risk score...',
+  'building your report...'
+];
+const STEPS = [
+  {id:'st1',t:'Connection & Fetch'},
+  {id:'st2',t:'Header Retrieval'},
+  {id:'st3',t:'Security Analysis'},
+  {id:'st4',t:'Tech Fingerprint'},
+  {id:'st5',t:'DNS & Subdomains'},
+  {id:'st6',t:'Score Calculation'}
+];
+
+let msgI = 0, msgTmr = null, scanHistory = [], lastReport = null;
+
+function gs(id) { document.getElementById(id)?.scrollIntoView({behavior:'smooth'}); }
+function tog(el) { el.classList.toggle('on'); }
+function eh(s) { return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function sp(p) { document.getElementById('prog').style.width = p + '%'; }
+function sm(i, s) {
+  const e = document.getElementById('st' + (i + 1));
+  if (!e) return;
+  e.className = 'ls ' + s;
+  e.querySelector('.ls-ic').textContent = s === 'done' ? '✓' : s === 'act' ? '▶' : '○';
+}
+
+function flashScan() {
+  const f = document.getElementById('scan-flash');
+  f.classList.add('on');
+  setTimeout(() => f.classList.remove('on'), 200);
+}
+
+async function fetchHP(url) {
+  for (let p of PROXIES) {
+    try {
+      const r = await fetch(p + encodeURIComponent(url), {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000)
+      });
+      if (r.status < 500) return r;
+    } catch(e) { /* try next proxy */ }
+  }
+  throw new Error("couldn't reach the site — it might be blocking proxies or is currently down");
+}
+
+async function dnsLookup(hostname, type) {
+  try {
+    const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=${type}`, {
+      headers: {Accept:'application/dns-json'},
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.Answer || [];
+  } catch(e) { return null; }
+}
+
+function isOptOn(id) {
+  const el = document.getElementById(id);
+  return el ? el.classList.contains('on') : true;
+}
+
+/* ── Redirect checker ── */
+async function checkRedirects(url) {
+  const findings = [];
+  try {
+    const httpUrl = url.replace(/^https?:\/\//i, 'http://');
+    const proxyUrl = PROXIES[0] + encodeURIComponent(httpUrl);
+    const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(7000) });
+    const loc = r.headers.get('location') || '';
+    if (url.startsWith('https://')) {
+      findings.push({sev:'pass',cat:'redirect',title:'HTTPS URL directly accessible',value:url,desc:'the URL provided is already HTTPS and responded successfully.',fix:''});
+    }
+    // www vs non-www check
+    const hn = new URL(url).hostname;
+    const wwwOther = hn.startsWith('www.') ? hn.slice(4) : 'www.' + hn;
+    try {
+      const altUrl = url.replace(hn, wwwOther);
+      const altProxy = PROXIES[0] + encodeURIComponent(altUrl);
+      const ar = await fetch(altProxy, { signal: AbortSignal.timeout(6000) });
+      if (ar.ok) {
+        const aloc = ar.headers.get('location') || '';
+        if (!aloc.includes(hn)) {
+          findings.push({sev:'low',cat:'redirect',title:'www/non-www not canonicalized',value:wwwOther + ' → no redirect to canonical',desc:'both www and non-www versions serve content independently. pick one and 301-redirect the other — this matters for SEO and can cause session issues.',fix:'Add a 301 redirect from one variant to the other in your server config.'});
+        } else {
+          findings.push({sev:'pass',cat:'redirect',title:'www canonicalization configured',value:'redirects to: ' + aloc.substring(0,60),desc:'one www variant redirects to the canonical URL correctly.',fix:''});
+        }
+      }
+    } catch(e) {}
+  } catch(e) {}
+  if (!findings.length) {
+    findings.push({sev:'info',cat:'redirect',title:'Redirect check inconclusive',value:'proxy limitation',desc:'could not fully trace redirect chain via proxy. run <code>curl -IL ' + url + '</code> locally for accurate results.',fix:''});
+  }
+  return findings;
+}
+
+/* ── SRI checker ── */
+async function checkSRI(html) {
+  const findings = [];
+  if (!html) return findings;
+  const scriptRe = /<script[^>]+src=["']?(https?:\/\/[^"'\s>]+)["']?[^>]*>/gi;
+  const linkRe = /<link[^>]+href=["']?(https?:\/\/[^"'\s>]+\.css[^"'\s>]*)["']?[^>]*>/gi;
+  const integrityRe = /integrity=["'][^"']+["']/i;
+  const externalScripts = [], externalStyles = [];
+  let m;
+  while ((m = scriptRe.exec(html)) !== null) {
+    const tag = m[0], src = m[1];
+    externalScripts.push({src, hasSRI: integrityRe.test(tag)});
+  }
+  while ((m = linkRe.exec(html)) !== null) {
+    const tag = m[0], href = m[1];
+    externalStyles.push({href, hasSRI: integrityRe.test(tag)});
+  }
+  const noSRIScripts = externalScripts.filter(s => !s.hasSRI);
+  const noSRIStyles = externalStyles.filter(s => !s.hasSRI);
+
+  if (noSRIScripts.length === 0 && externalScripts.length > 0) {
+    findings.push({sev:'pass',cat:'sri',title:`All ${externalScripts.length} external script(s) have SRI hashes`,value:`${externalScripts.length} scripts verified`,desc:'subresource integrity enforced — CDN tampering attempts would be blocked by the browser.',fix:''});
+  } else if (noSRIScripts.length > 0) {
+    findings.push({sev:'high',cat:'sri',title:`${noSRIScripts.length} external script(s) missing SRI`,value:noSRIScripts.slice(0,3).map(s=>s.src).join(', '),desc:'if a CDN or third-party host is compromised, malicious code can be silently injected into your page. SRI prevents this by verifying script hash before execution.',fix:'Generate hashes at <code>srihash.org</code> and add <code>integrity="sha384-..."</code> + <code>crossorigin="anonymous"</code> to each script tag.'});
+  }
+  if (noSRIStyles.length > 0) {
+    findings.push({sev:'medium',cat:'sri',title:`${noSRIStyles.length} external stylesheet(s) missing SRI`,value:noSRIStyles.slice(0,3).map(s=>s.href).join(', '),desc:'external CSS without SRI can be modified by a CDN to exfiltrate data via CSS selectors or inject malicious content.',fix:'Add integrity hash to your link tags. Use <code>srihash.org</code> to generate SHA-384 hashes.'});
+  }
+  if (externalScripts.length === 0 && externalStyles.length === 0) {
+    findings.push({sev:'pass',cat:'sri',title:'No external CDN scripts or stylesheets detected',value:'all resources appear local/inline',desc:'no CDN-hosted assets found on this page — no SRI required.',fix:''});
+  }
+
+  // Mixed content check
+  const mixedRe = /(?:src|href|action)=["'](http:\/\/[^"']+)["']/gi;
+  const mixedResources = [];
+  while ((m = mixedRe.exec(html)) !== null) { mixedResources.push(m[1]); }
+  if (mixedResources.length > 0) {
+    findings.push({sev:'high',cat:'sri',title:`Mixed content: ${mixedResources.length} HTTP resource(s) on HTTPS page`,value:mixedResources.slice(0,3).join(', '),desc:'loading HTTP resources on an HTTPS page can be blocked by browsers and weakens your security posture, potentially allowing resource injection.',fix:'Change all resource URLs to https:// or use protocol-relative // URLs.'});
+  } else {
+    findings.push({sev:'pass',cat:'sri',title:'No mixed content detected',value:'all scanned resources use HTTPS',desc:'no HTTP resources found on this HTTPS page.',fix:''});
+  }
+  return findings;
+}
+
+/* ── Exposed services checker ── */
+async function checkExposedServices(hn) {
+  const findings = [];
+  const sensitiveSubdomains = ['admin','jenkins','jira','kibana','grafana','phpmyadmin','adminer','portainer','traefik','prometheus','gitlab','sonar','staging','dev','test','beta','api','internal','vpn','mail','webmail','cpanel','whm','ftp'];
+  const found = [];
+  const checks = sensitiveSubdomains.slice(0, 10).map(async sub => {
+    const fullHost = sub + '.' + hn;
+    try {
+      const res = await dnsLookup(fullHost, 'A');
+      if (res && res.length > 0) found.push({sub: fullHost, ip: res[0].data});
+    } catch(e) {}
+  });
+  await Promise.all(checks);
+
+  if (found.length > 0) {
+    findings.push({sev:'medium',cat:'ports',title:`${found.length} exposed subdomain(s) detected`,value:found.map(f => f.sub + ' (' + f.ip + ')').join(', '),desc:'these subdomains resolve to real IPs and may expose admin panels, CI/CD systems, or internal services to the internet without authentication gates.',fix:'Ensure these subdomains require strong authentication. Consider IP allowlisting, VPN gating, or removing public DNS resolution for sensitive services.'});
+  } else {
+    findings.push({sev:'pass',cat:'ports',title:'No sensitive exposed subdomains found',value:'checked: ' + sensitiveSubdomains.slice(0, 10).join(', '),desc:'common admin/internal subdomains are not publicly resolving — good hygiene.',fix:''});
+  }
+
+  try {
+    const mx = await dnsLookup(hn, 'MX');
+    if (mx && mx.length > 0) {
+      findings.push({sev:'pass',cat:'ports',title:'MX records configured',value:mx.slice(0,2).map(r=>r.data).join(', '),desc:'email is properly configured for this domain.',fix:''});
+    } else {
+      findings.push({sev:'info',cat:'ports',title:'No MX records — email not configured',value:'no MX found',desc:'this domain does not receive email. even without MX, ensure SPF and DMARC exist to block spoofing attacks impersonating your domain.',fix:'Add: <code>v=spf1 ~all</code> TXT record and a DMARC policy to prevent spoofing.'});
+    }
+  } catch(e) {}
+  return findings;
+}
+
+/* ── Main scan ── */
+async function startScan() {
+  let raw = document.getElementById('url-in').value.trim();
+  if (!raw) { showErr('enter a URL first — try https://example.com'); return; }
+  if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
+  document.getElementById('url-in').value = raw;
+  let hn;
+  try { hn = new URL(raw).hostname; } catch(e) { showErr('that URL looks broken'); return; }
+  if (!hn || hn.length < 3) { showErr('hostname looks invalid — check your URL'); return; }
+
+  clearErr();
+  document.getElementById('scan-btn').disabled = true;
+  const res = document.getElementById('res');
+  res.style.display = 'none'; res.innerHTML = '';
+  const ld = document.getElementById('load');
+  ld.style.display = 'block';
+  document.getElementById('lsteps').innerHTML = STEPS.map(s =>
+    `<div class="ls" id="${s.id}"><span class="ls-ic">○</span>${s.t}</div>`
+  ).join('');
+  msgI = 0;
+  document.getElementById('lmsg').textContent = MSGS[0];
+  msgTmr = setInterval(() => {
+    msgI = (msgI + 1) % MSGS.length;
+    document.getElementById('lmsg').textContent = MSGS[msgI];
+  }, 900);
+  sp(3);
+
+  try {
+    sm(0,'act'); await sleep(200); sp(8);
+    let resp, hdrs = {}, rawHtml = '';
+
+    try {
+      resp = await fetchHP(raw);
+      resp.headers.forEach((v, k) => { hdrs[k.toLowerCase()] = v; });
+      try { rawHtml = await resp.clone().text(); } catch(e) { rawHtml = ''; }
+      sm(0,'done'); sm(1,'act'); sp(22); await sleep(200);
+      sm(1,'done'); sp(38);
+    } catch(e) {
+      throw new Error(e.message);
+    }
+
+    flashScan();
+    sm(2,'act'); await sleep(350); sp(50);
+    let secFindings = analyzeHeaders(raw, hn, hdrs, resp);
+
+    if (isOptOn('opt-redirect')) {
+      const redir = await checkRedirects(raw);
+      secFindings = secFindings.concat(redir);
+    }
+    if (isOptOn('opt-sri') && rawHtml) {
+      const sriFindings = await checkSRI(rawHtml);
+      secFindings = secFindings.concat(sriFindings);
+    }
+    sm(2,'done'); sm(3,'act'); sp(62); await sleep(250);
+
+    const tech = fingerprint(hdrs, raw, rawHtml);
+    sm(3,'done'); sm(4,'act'); sp(73); await sleep(250);
+
+    const cookies = parseCookies(hdrs);
+    sp(80);
+
+    let dns = { spf: null, dmarc: null, dkim: null, extra: [] };
+    try {
+      const [spfR, dmarcR] = await Promise.all([
+        dnsLookup(hn, 'TXT'),
+        dnsLookup('_dmarc.' + hn, 'TXT')
+      ]);
+      if (spfR) {
+        const s = spfR.find(r => r.data && r.data.includes('v=spf1'));
+        dns.spf = s ? s.data : '';
+      }
+      if (dmarcR) {
+        const d = dmarcR.find(r => r.data && r.data.includes('v=DMARC1'));
+        dns.dmarc = d ? d.data : '';
+      }
+    } catch(e) {}
+
+    if (isOptOn('opt-ports')) {
+      const portFindings = await checkExposedServices(hn);
+      dns.extra = portFindings;
+      secFindings = secFindings.concat(portFindings);
+    }
+
+    // Add DNS findings to secFindings (SPF/DMARC as findings)
+    if (dns.spf !== null) {
+      if (dns.spf === '') {
+        secFindings.push({sev:'high',cat:'dns',title:'No SPF record — email spoofing risk',value:'missing',desc:'anyone can send email pretending to be from your domain. SPF tells mail servers which IPs are authorized to send for you.',fix:'Add TXT record: <code>v=spf1 include:your-mail-provider.com ~all</code>'});
+      } else {
+        secFindings.push({sev:'pass',cat:'dns',title:'SPF record found',value:dns.spf.length>80?dns.spf.substring(0,80)+'...':dns.spf,desc:'SPF configured — unauthorized senders can be rejected.',fix:''});
+      }
+    }
+    if (dns.dmarc !== null) {
+      if (dns.dmarc === '') {
+        secFindings.push({sev:'high',cat:'dns',title:'No DMARC record — phishing risk',value:'missing',desc:'without DMARC, phishing emails spoofing your domain can reach inboxes. DMARC adds policy enforcement on top of SPF/DKIM.',fix:'Add TXT on <code>_dmarc.yourdomain.com</code>: <code>v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com</code>'});
+      } else {
+        const policy = (dns.dmarc.match(/p=([^;]+)/)||[])[1] || 'none';
+        const sev = policy === 'reject' ? 'pass' : policy === 'quarantine' ? 'low' : 'medium';
+        secFindings.push({sev,cat:'dns',title:`DMARC found — policy: ${policy}`,value:dns.dmarc.length>80?dns.dmarc.substring(0,80)+'...':dns.dmarc,desc:policy==='reject'?'strong DMARC — unauthorized emails are rejected outright.':policy==='quarantine'?'DMARC set to quarantine. Consider upgrading to p=reject for stronger protection.':'DMARC policy is "none" — monitoring only, no enforcement. Upgrade to quarantine or reject.',fix:policy!=='reject'?'Change p=none to p=reject once you\'ve verified your legitimate mail streams.':''});
+      }
+    }
+
+    sm(4,'done'); sm(5,'act'); sp(90); await sleep(200);
+
+    const report = buildScore(raw, hn, hdrs, secFindings, tech, cookies, dns);
+    sm(5,'done'); sp(100); await sleep(250);
+
+    clearInterval(msgTmr);
+    ld.style.display = 'none';
+    flashScan();
+    renderResults(report);
+    saveHistory(report);
+    renderHistory();
+  } catch(e) {
+    clearInterval(msgTmr);
+    ld.style.display = 'none';
+    showErr(e.message + '. Try a different URL or check your network.');
+    document.getElementById('scan-btn').disabled = false;
+  }
+}
+
+/* ── Header analysis ── */
+function analyzeHeaders(url, hn, h, resp) {
+  const F = [];
+  const https = url.startsWith('https://');
+
+  // HTTPS
+  if (!https) {
+    F.push({sev:'critical',cat:'https',title:'No HTTPS — plain HTTP in 2026 is wild',value:url,desc:"everything your users send is cleartext on the wire. passwords, session tokens, credit card data — readable by anyone on the network path. no excuse exists for this in 2025.",fix:'Get a free SSL cert from <code>letsencrypt.org</code> and redirect all HTTP → HTTPS.'});
+  } else {
+    F.push({sev:'pass',cat:'https',title:'HTTPS enabled',value:'https://',desc:'encrypted transport is active.',fix:''});
+  }
+
+  // HSTS
+  const hsts = h['strict-transport-security'];
+  if (!hsts) {
+    F.push({sev:'high',cat:'headers',title:'No HSTS header',value:'MISSING',desc:"without HSTS, browsers may connect over HTTP first, enabling SSL stripping attacks. attackers on the network can intercept the first request.",fix:'Add: <code>Strict-Transport-Security: max-age=31536000; includeSubDomains; preload</code>'});
+  } else {
+    const ma = parseInt((hsts.match(/max-age=(\d+)/)||[])[1] || 0);
+    if (ma < 15552000) F.push({sev:'medium',cat:'headers',title:'HSTS max-age too short (' + ma + 's)',value:hsts,desc:'less than 6 months — browsers forget quickly, leaving windows for downgrade attacks.',fix:'Set max-age=31536000 (1 year) minimum. Ideally also add includeSubDomains and preload.'});
+    else if (!/includeSubDomains/i.test(hsts) || !/preload/i.test(hsts)) F.push({sev:'low',cat:'headers',title:'HSTS missing includeSubDomains or preload',value:hsts,desc:'good but not fully hardened. subdomains or HSTS preload list not covered.',fix:'Add includeSubDomains and preload flags to be fully protected.'});
+    else F.push({sev:'pass',cat:'headers',title:'HSTS fully configured',value:hsts,desc:'max-age, includeSubDomains, and preload — all present. solid.',fix:''});
+  }
+
+  // CSP
+  const csp = h['content-security-policy'];
+  if (!csp) {
+    F.push({sev:'critical',cat:'headers',title:'Missing Content-Security-Policy',value:'MISSING',desc:"no CSP means XSS attacks can execute arbitrary JavaScript on your page. this is one of the highest-impact headers you can add — it defines what content is allowed to load.",fix:"Start with: <code>Content-Security-Policy: default-src 'self'</code> then expand per resource type."});
+  } else {
+    const hasUnsafeInline = /unsafe-inline/i.test(csp);
+    const hasUnsafeEval = /unsafe-eval/i.test(csp);
+    const hasWildcard = /(?:^|[\s;])\*(?:[\s;]|$)/.test(csp);
+    if (hasUnsafeInline || hasUnsafeEval || hasWildcard) {
+      const issues = [hasUnsafeInline?'unsafe-inline':'', hasUnsafeEval?'unsafe-eval':'', hasWildcard?'wildcard *':''].filter(Boolean).join(', ');
+      F.push({sev:'medium',cat:'headers',title:'CSP present but weak: ' + issues,value:csp.length>180?csp.substring(0,180)+'...':csp,desc:"CSP exists but " + issues + " weakens it significantly. XSS may still be exploitable.",fix:"Remove 'unsafe-inline' and 'unsafe-eval'. Use nonces or hashes for inline scripts instead."});
+    } else {
+      F.push({sev:'pass',cat:'headers',title:'CSP looks solid',value:csp.length>180?csp.substring(0,180)+'...':csp,desc:'no obvious weak directives. nice CSP config.',fix:''});
+    }
+  }
+
+  // X-Frame-Options
+  const xfo = h['x-frame-options'];
+  if (!xfo && (!csp || !csp.includes('frame-ancestors'))) {
+    F.push({sev:'high',cat:'headers',title:'No X-Frame-Options — clickjacking risk',value:'MISSING',desc:"your site can be loaded in an iframe on attacker-controlled pages. users think they're interacting with your UI but are actually clicking attacker-controlled overlay elements.",fix:'Add: <code>X-Frame-Options: DENY</code> or use CSP <code>frame-ancestors \'none\'</code>'});
+  } else if (xfo) {
+    if (['deny','sameorigin'].includes(xfo.toLowerCase())) {
+      F.push({sev:'pass',cat:'headers',title:'X-Frame-Options set correctly',value:xfo,desc:'clickjacking protection in place.',fix:''});
+    } else {
+      F.push({sev:'medium',cat:'headers',title:'X-Frame-Options has non-standard value',value:xfo,desc:'non-standard value may not be honored by all browsers.',fix:'Use DENY or SAMEORIGIN.'});
+    }
+  } else {
+    F.push({sev:'pass',cat:'headers',title:'Frame protection via CSP frame-ancestors',value:'via CSP',desc:'clickjacking covered by CSP frame-ancestors directive.',fix:''});
+  }
+
+  // X-Content-Type-Options
+  const xcto = h['x-content-type-options'];
+  if (!xcto) {
+    F.push({sev:'medium',cat:'headers',title:'No X-Content-Type-Options',value:'MISSING',desc:"browsers may sniff content types, enabling MIME confusion attacks where a text file is executed as JS.",fix:'Add: <code>X-Content-Type-Options: nosniff</code> — one line fix.'});
+  } else if (xcto.toLowerCase() === 'nosniff') {
+    F.push({sev:'pass',cat:'headers',title:'X-Content-Type-Options: nosniff ✓',value:xcto,desc:'MIME type sniffing disabled.',fix:''});
+  } else {
+    F.push({sev:'low',cat:'headers',title:'X-Content-Type-Options unusual value',value:xcto,desc:'expected "nosniff".',fix:'Set to: nosniff'});
+  }
+
+  // Referrer-Policy
+  const rp = h['referrer-policy'];
+  const goodRPs = ['no-referrer','no-referrer-when-downgrade','same-origin','strict-origin','strict-origin-when-cross-origin','origin-when-cross-origin'];
+  if (!rp) {
+    F.push({sev:'low',cat:'headers',title:'No Referrer-Policy',value:'MISSING',desc:"full URLs get sent to third-party sites in the Referer header. can leak sensitive path/query params to external services.",fix:'Add: <code>Referrer-Policy: strict-origin-when-cross-origin</code>'});
+  } else if (goodRPs.includes(rp.toLowerCase())) {
+    F.push({sev:'pass',cat:'headers',title:'Referrer-Policy configured',value:rp,desc:'referrer leakage controlled to third parties.',fix:''});
+  } else if (rp.toLowerCase() === 'unsafe-url') {
+    F.push({sev:'medium',cat:'headers',title:'Referrer-Policy: unsafe-url — maximally leaky',value:rp,desc:'sends full URL to all destinations, including cross-origin. change immediately.',fix:'Use: strict-origin-when-cross-origin'});
+  } else {
+    F.push({sev:'info',cat:'headers',title:'Referrer-Policy set (unusual value)',value:rp,desc:'non-standard value. review whether it achieves intended behavior.',fix:''});
+  }
+
+  // Permissions-Policy
+  const pp = h['permissions-policy'] || h['feature-policy'];
+  if (!pp) {
+    F.push({sev:'low',cat:'headers',title:'No Permissions-Policy',value:'MISSING',desc:"no control over browser APIs available to your page and embedded third-party scripts. they could request camera, microphone, geolocation, etc.",fix:'Add: <code>Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()</code>'});
+  } else {
+    F.push({sev:'pass',cat:'headers',title:'Permissions-Policy configured',value:pp.length>120?pp.substring(0,120)+'...':pp,desc:'browser feature/API access restricted.',fix:''});
+  }
+
+  // Server header
+  const srv = h['server'];
+  if (srv) {
+    const hasVersion = /[\d.]{3,}/.test(srv);
+    F.push({sev:hasVersion?'medium':'low',cat:'info',title:(hasVersion?'Server header leaks version: ':'Server header exposed: ') + srv,value:srv,desc:hasVersion?`attackers see your exact software version and can look up CVEs for it directly.`:`server software is exposed but version is hidden. still adds to attacker recon.`,fix:'nginx: <code>server_tokens off;</code> &nbsp; Apache: <code>ServerSignature Off; ServerTokens Prod</code>'});
+  } else {
+    F.push({sev:'pass',cat:'info',title:'Server header hidden',value:'absent',desc:'not advertising server software to attackers.',fix:''});
+  }
+
+  // X-Powered-By
+  const xpb = h['x-powered-by'];
+  if (xpb) {
+    F.push({sev:'medium',cat:'info',title:'X-Powered-By leaking: ' + xpb,value:xpb,desc:"reveals exact framework/runtime. helps attackers narrow target CVE lists.",fix:'Express: <code>app.disable(\'x-powered-by\')</code> &nbsp; PHP: <code>expose_php = Off</code>'});
+  } else {
+    F.push({sev:'pass',cat:'info',title:'X-Powered-By absent',value:'absent',desc:'framework fingerprinting blocked.',fix:''});
+  }
+
+  // ASP.NET version
+  const aspn = h['x-aspnet-version'] || h['x-aspnetmvc-version'];
+  if (aspn) {
+    F.push({sev:'medium',cat:'info',title:'ASP.NET version exposed: ' + aspn,value:aspn,desc:'version disclosure lets attackers look up known ASP.NET CVEs for your exact version.',fix:'web.config: <code>&lt;httpRuntime enableVersionHeader="false"/&gt;</code>'});
+  }
+
+  // Via header
+  const via = h['via'];
+  if (via) {
+    F.push({sev:'low',cat:'info',title:'Via header reveals proxy chain',value:via,desc:'reveals infrastructure hops — proxy types, internal hostnames. minor but useful for attacker recon.',fix:'Configure proxy/CDN to strip or suppress the Via header.'});
+  }
+
+  // CORS
+  const acao = h['access-control-allow-origin'];
+  if (acao === '*') {
+    F.push({sev:'medium',cat:'headers',title:'CORS wildcard — any origin can read responses',value:'*',desc:"any website can make cross-origin requests and read your responses. critical if you handle authentication, user data, or APIs.",fix:'Restrict to: <code>Access-Control-Allow-Origin: https://yourdomain.com</code>'});
+  } else if (acao) {
+    F.push({sev:'pass',cat:'headers',title:'CORS restricted to specific origin',value:acao,desc:'CORS scoped to defined origin.',fix:''});
+  }
+
+  // Cross-Origin headers
+  const coep = h['cross-origin-embedder-policy'];
+  if (!coep) {
+    F.push({sev:'info',cat:'headers',title:'No COEP header',value:'MISSING',desc:'required for cross-origin isolation. necessary if you use SharedArrayBuffer or high-precision timers.',fix:'Add: <code>Cross-Origin-Embedder-Policy: require-corp</code>'});
+  } else {
+    F.push({sev:'pass',cat:'headers',title:'COEP configured',value:coep,desc:'cross-origin embedding policy in place.',fix:''});
+  }
+
+  const coop = h['cross-origin-opener-policy'];
+  if (!coop) {
+    F.push({sev:'info',cat:'headers',title:'No COOP header',value:'MISSING',desc:'prevents cross-origin window access — helps defend against XS-Leaks timing attacks.',fix:'Add: <code>Cross-Origin-Opener-Policy: same-origin</code>'});
+  } else {
+    F.push({sev:'pass',cat:'headers',title:'COOP configured',value:coop,desc:'opener policy isolating window context.',fix:''});
+  }
+
+  const corp = h['cross-origin-resource-policy'];
+  if (!corp) {
+    F.push({sev:'low',cat:'headers',title:'No CORP header',value:'MISSING',desc:'your resources can be loaded cross-origin without explicit opt-in. opt-in to same-origin for sensitive resources.',fix:'Add: <code>Cross-Origin-Resource-Policy: same-origin</code>'});
+  } else {
+    F.push({sev:'pass',cat:'headers',title:'CORP configured',value:corp,desc:'resource cross-origin loading controlled.',fix:''});
+  }
+
+  // Cache-Control for sensitive pages
+  const cc = h['cache-control'];
+  if (!cc) {
+    F.push({sev:'info',cat:'headers',title:'No Cache-Control header',value:'MISSING',desc:'sensitive pages without cache directives may be cached by proxies or browsers. set no-store on authenticated pages.',fix:'Add: <code>Cache-Control: no-store, no-cache, must-revalidate</code> on authenticated endpoints.'});
+  }
+
+  return F;
+}
+
+/* ── Tech fingerprinting (enhanced with HTML body detection) ── */
+function fingerprint(h, url, html) {
+  const techs = [];
+  const s = h['server'] || '';
+  const xpb = h['x-powered-by'] || '';
+  const co = h['set-cookie'] || '';
+  const via = h['via'] || '';
+  const cf = h['cf-ray'] || h['cf-cache-status'] || '';
+  const xvh = h['x-varnish'] || '';
+  const xc = h['x-cache'] || '';
+  const body = (html || '').toLowerCase();
+
+  // Web Servers
+  if (/nginx/i.test(s)) techs.push({icon:'🟩',name:'nginx',cat:'Web Server'});
+  if (/apache/i.test(s)) techs.push({icon:'🪶',name:'Apache',cat:'Web Server'});
+  if (/iis/i.test(s) || /asp\.net/i.test(xpb) || h['x-aspnet-version']) techs.push({icon:'🪟',name:'IIS / ASP.NET',cat:'Web Server'});
+  if (/caddy/i.test(s)) techs.push({icon:'🔵',name:'Caddy',cat:'Web Server'});
+  if (/openresty/i.test(s)) techs.push({icon:'🌊',name:'OpenResty',cat:'Web Server'});
+  if (/litespeed/i.test(s)) techs.push({icon:'⚡',name:'LiteSpeed',cat:'Web Server'});
+
+  // Runtimes
+  if (/express/i.test(xpb) || /node/i.test(xpb)) techs.push({icon:'🟨',name:'Node.js / Express',cat:'Runtime'});
+  if (/php/i.test(xpb) || /phpsessid/i.test(co.toLowerCase())) techs.push({icon:'🐘',name:'PHP',cat:'Language'});
+
+  // Frameworks (headers)
+  if (/laravel/i.test(co)) techs.push({icon:'🔴',name:'Laravel',cat:'Framework'});
+  if (/django/i.test(co) || /csrftoken/i.test(co.toLowerCase())) techs.push({icon:'🎸',name:'Django',cat:'Framework'});
+  if (/rails/i.test(co) || /_session/i.test(co)) techs.push({icon:'💎',name:'Ruby on Rails',cat:'Framework'});
+
+  // CDN / Proxy
+  if (cf) techs.push({icon:'🌤',name:'Cloudflare',cat:'CDN / Proxy'});
+  if (xvh || /varnish/i.test(xc)) techs.push({icon:'🔷',name:'Varnish Cache',cat:'Cache'});
+  if (/akamai/i.test(via) || /akamai/i.test(xc)) techs.push({icon:'🌐',name:'Akamai',cat:'CDN'});
+  if (/fastly/i.test(via) || /fastly/i.test(xc)) techs.push({icon:'⚡',name:'Fastly',cat:'CDN'});
+
+  // Cloud
+  if (h['x-amz-request-id'] || h['x-amz-cf-id']) techs.push({icon:'☁️',name:'AWS',cat:'Cloud'});
+  if (h['x-azure-ref']) techs.push({icon:'🔵',name:'Azure',cat:'Cloud'});
+  if (h['x-goog-generation'] || h['x-guploader-uploadid']) techs.push({icon:'🔶',name:'Google Cloud',cat:'Cloud'});
+
+  // CMS / Frameworks from HTML body
+  if (body.includes('wp-content') || /wordpress/i.test(h['link']||'')) techs.push({icon:'🔵',name:'WordPress',cat:'CMS'});
+  if (body.includes('drupal') || body.includes('sites/all')) techs.push({icon:'🌀',name:'Drupal',cat:'CMS'});
+  if (body.includes('joomla')) techs.push({icon:'🔶',name:'Joomla',cat:'CMS'});
+  if (body.includes('shopify')) techs.push({icon:'🟢',name:'Shopify',cat:'E-commerce'});
+  if (body.includes('woocommerce')) techs.push({icon:'🟣',name:'WooCommerce',cat:'E-commerce'});
+  if (body.includes('magento')) techs.push({icon:'🟠',name:'Magento',cat:'E-commerce'});
+  if (body.includes('next.js') || body.includes('__next') || body.includes('_next/')) techs.push({icon:'⬛',name:'Next.js',cat:'Framework'});
+  if (body.includes('nuxt') || body.includes('__nuxt')) techs.push({icon:'🟢',name:'Nuxt.js',cat:'Framework'});
+  if (body.includes('react') || body.includes('__react')) techs.push({icon:'⚛️',name:'React',cat:'Frontend'});
+  if (body.includes('angular')) techs.push({icon:'🔴',name:'Angular',cat:'Frontend'});
+  if (body.includes('vue.js') || body.includes('vuejs') || body.includes('data-v-')) techs.push({icon:'💚',name:'Vue.js',cat:'Frontend'});
+  if (body.includes('svelte')) techs.push({icon:'🔥',name:'Svelte',cat:'Frontend'});
+  if (body.includes('jquery')) techs.push({icon:'🔵',name:'jQuery',cat:'Library'});
+  if (body.includes('bootstrap')) techs.push({icon:'💜',name:'Bootstrap',cat:'CSS Framework'});
+  if (body.includes('tailwind')) techs.push({icon:'🌊',name:'Tailwind CSS',cat:'CSS Framework'});
+  if (body.includes('google-analytics') || body.includes('gtag(') || body.includes('ga.js')) techs.push({icon:'📊',name:'Google Analytics',cat:'Analytics'});
+  if (body.includes('segment.com') || body.includes('analytics.js')) techs.push({icon:'📈',name:'Segment',cat:'Analytics'});
+  if (body.includes('intercom')) techs.push({icon:'💬',name:'Intercom',cat:'Support'});
+
+  if (!techs.length) techs.push({icon:'❓',name:'Unknown stack',cat:'Could not detect from headers/body'});
+  return techs;
+}
+
+/* ── Cookie parser ── */
+function parseCookies(h) {
+  const raw = h['set-cookie'] || '';
+  if (!raw) return [];
+  const lines = raw.includes('\n') ? raw.split('\n') : [raw];
+  return lines.filter(Boolean).map(line => {
+    const parts = line.split(';').map(s => s.trim());
+    const nameVal = parts[0] || '';
+    const nm = nameVal.split('=')[0] || '?';
+    const lp = parts.map(p => p.toLowerCase());
+    const ss = lp.find(p => p.startsWith('samesite=')) || '';
+    return {
+      name: nm,
+      secure: lp.some(p => p === 'secure'),
+      httponly: lp.some(p => p === 'httponly'),
+      samesite: ss,
+      raw: line.length > 100 ? line.substring(0, 100) + '...' : line
+    };
+  });
+}
+
+/* ── Score builder ── */
+function buildScore(url, hn, hdrs, findings, tech, cookies, dns) {
+  const sevW = { critical:-25, high:-15, medium:-8, low:-3, info:-1, pass:4 };
+  let sc = 100, crit = 0, high = 0, med = 0, low = 0, info = 0, pass = 0;
+  findings.forEach(f => {
+    sc += (sevW[f.sev] || 0);
+    if (f.sev === 'critical') crit++;
+    else if (f.sev === 'high') high++;
+    else if (f.sev === 'medium') med++;
+    else if (f.sev === 'low') low++;
+    else if (f.sev === 'info') info++;
+    else if (f.sev === 'pass') pass++;
+  });
+  sc = Math.max(0, Math.min(100, sc));
+  const g = sc>=90?'A':sc>=75?'B':sc>=60?'C':sc>=40?'D':'F';
+  const gc = sc>=90?'#00c864':sc>=75?'#00a050':sc>=60?'#ffc400':sc>=40?'#ff6600':'#e5000a';
+  const sm2 = sc>=90?'well hardened — solid security posture':sc>=75?'decent config, a few things to tighten':sc>=60?'average — needs attention on critical gaps':sc>=40?'multiple significant issues — prioritize fixes now':'severe vulnerabilities present — fix immediately';
+  return { url, hn, score:sc, grade:g, gradeColor:gc, summary:sm2, findings, tech, cookies, dns, allHdrs:hdrs, crit, high, med, low, info, pass, ts: new Date().toISOString() };
+}
+
+/* ── Render results ── */
+function renderResults(r) { lastReport = r; _renderResultsImpl(r); }
+
+function _renderResultsImpl(r) {
+  const el = document.getElementById('res');
+  el.style.display = 'block';
+  const nonPass = r.findings.filter(f => f.sev !== 'pass');
+  const passing = r.findings.filter(f => f.sev === 'pass');
+  const C = 2 * Math.PI * 52;
+
+  el.innerHTML = `
+<div class="score-hero fade" style="margin-bottom:1.2rem">
+  <div class="ring-wrap">
+    <svg width="120" height="120" viewBox="0 0 120 120">
+      <circle class="rb" cx="60" cy="60" r="52"/>
+      <circle class="rf" id="rfl" cx="60" cy="60" r="52" stroke="${r.gradeColor}" stroke-dasharray="${C}" stroke-dashoffset="${C}"/>
+    </svg>
+    <div class="rn"><div class="rn-big" id="scnt" style="color:${r.gradeColor}">0</div><div class="rn-lbl">/ 100</div></div>
+  </div>
+  <div class="grade" style="color:${r.gradeColor};text-shadow:0 0 40px ${r.gradeColor}88">${r.grade}</div>
+  <div class="score-info">
+    <h2>${eh(r.hn)}</h2>
+    <p>${r.summary}</p>
+    <div class="pills">
+      ${r.crit ? `<span class="pill p-c">${r.crit} Critical</span>` : ''}
+      ${r.high ? `<span class="pill p-h">${r.high} High</span>` : ''}
+      ${r.med ? `<span class="pill p-m">${r.med} Medium</span>` : ''}
+      ${r.low ? `<span class="pill p-l">${r.low} Low</span>` : ''}
+      <span class="pill p-p">${r.pass} Passing</span>
+    </div>
+  </div>
+</div>
+
+<div class="action-row fade">
+  <button class="btn-sec" onclick="exportJSON()">⬇ Export JSON</button>
+  <button class="btn-sec" onclick="exportText()">📄 Export Report</button>
+  <button class="btn-sec" onclick="copyURL()">🔗 Copy URL</button>
+  <button class="btn-sec" onclick="gs('scan-sec');setTimeout(startScan,300)">🔄 Re-scan</button>
+</div>
+
+<div class="sum-grid fade">
+  <div class="sum-c rc"><div class="sum-n" style="color:#e5000a">${r.crit}</div><div class="sum-d">Critical</div></div>
+  <div class="sum-c oc"><div class="sum-n" style="color:#ff6600">${r.high}</div><div class="sum-d">High</div></div>
+  <div class="sum-c yc"><div class="sum-n" style="color:#ffc400">${r.med}</div><div class="sum-d">Medium</div></div>
+  <div class="sum-c gc"><div class="sum-n" style="color:#00c864">${r.pass}</div><div class="sum-d">Passing</div></div>
+</div>
+
+<div class="chart-wrap fade">
+  <div class="chart-title">// severity breakdown</div>
+  <div class="bar-chart">
+    ${buildBar('Critical',r.crit,'#e5000a')}
+    ${buildBar('High',r.high,'#ff6600')}
+    ${buildBar('Medium',r.med,'#ffc400')}
+    ${buildBar('Low',r.low,'#00c864')}
+    ${buildBar('Passing',r.pass,'#00b450')}
+  </div>
+</div>
+
+<div class="tabs fade">
+  <button class="tab act" onclick="st(this,'ti')">Issues (${nonPass.length})</button>
+  <button class="tab" onclick="st(this,'tp')">Passing (${passing.length})</button>
+  <button class="tab" onclick="st(this,'ttech')">Tech Stack (${r.tech.length})</button>
+  <button class="tab" onclick="st(this,'tcook')">Cookies (${r.cookies.length})</button>
+  <button class="tab" onclick="st(this,'tdns')">DNS Security</button>
+  <button class="tab" onclick="st(this,'tsri')">SRI & Redirects</button>
+  <button class="tab" onclick="st(this,'tfix')">Auto-Fix Config</button>
+  <button class="tab" onclick="st(this,'thdr')">Raw Headers (${Object.keys(r.allHdrs).length})</button>
+</div>
+
+<div id="ti" class="tc act fade">
+  <div class="findings">${nonPass.sort((a,b)=>{const o={critical:0,high:1,medium:2,low:3,info:4};return(o[a.sev]??5)-(o[b.sev]??5);}).map(f=>fcard(f)).join('')||'<p style="color:var(--gray);text-align:center;padding:2rem">🎉 all clear — nothing to fix!</p>'}</div>
+</div>
+<div id="tp" class="tc">
+  <div class="findings">${passing.map(f=>fcard(f)).join('')||'<p style="color:var(--gray);text-align:center;padding:2rem">nothing passing yet.</p>'}</div>
+</div>
+<div id="ttech" class="tc">
+  <div class="tech-grid">${r.tech.map(t=>`<div class="tech-item"><div class="tech-icon">${t.icon}</div><div><div class="tech-name">${eh(t.name)}</div><div class="tech-cat">${eh(t.cat)}</div></div></div>`).join('')}</div>
+</div>
+<div id="tcook" class="tc">
+  ${r.cookies.length === 0
+    ? '<p style="color:var(--gray);padding:1rem">no Set-Cookie headers found — either no cookies set or the proxy stripped them. check with browser devtools directly.</p>'
+    : `<div class="card" style="overflow:auto"><table class="ctable">
+    <thead><tr><th>Name</th><th>Secure</th><th>HttpOnly</th><th>SameSite</th></tr></thead>
+    <tbody>${r.cookies.map(c=>`<tr>
+      <td class="ct-n">${eh(c.name)}</td>
+      <td class="${c.secure?'ct-ok':'ct-bad'}">${c.secure?'✓ yes':'✗ missing'}</td>
+      <td class="${c.httponly?'ct-ok':'ct-bad'}">${c.httponly?'✓ yes':'✗ missing'}</td>
+      <td class="${c.samesite?'ct-ok':'ct-miss'}">${c.samesite?eh(c.samesite.replace('samesite=','')):'not set'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`}
+</div>
+<div id="tdns" class="tc">
+  <div class="card card-pad">
+    ${dnsRow('SPF', r.dns.spf)}
+    ${dnsRow('DMARC', r.dns.dmarc)}
+    <div class="dns-row"><div class="dns-name">DKIM</div><div class="dns-val" style="font-size:.72rem">requires known selector — check manually: <code>nslookup -type=TXT default._domainkey.${eh(r.hn)}</code></div><div class="dns-stat ds-na">manual</div></div>
+    ${r.dns.extra && r.dns.extra.length > 0 ? '<div style="margin-top:1rem;font-size:.72rem;color:var(--dg);font-family:monospace;letter-spacing:.05em;">// SUBDOMAIN SCAN</div>' + r.dns.extra.map(f=>`<div class="dns-row"><div class="dns-name" style="width:auto;flex:1">${eh(f.title)}</div><div class="dns-stat ${f.sev==='pass'?'ds-ok':f.sev==='info'?'ds-na':'ds-bad'}">${f.sev.toUpperCase()}</div></div>`).join('') : ''}
+  </div>
+</div>
+<div id="tsri" class="tc">
+  <div class="findings">
+    ${(()=>{
+      const sriFindings = r.findings.filter(f => ['sri','redirect','ports'].includes(f.cat));
+      return sriFindings.length
+        ? sriFindings.map(f=>fcard(f)).join('')
+        : '<p style="color:var(--gray);padding:1rem">SRI, redirect, and subdomain findings will appear here when those options are enabled.</p>';
+    })()}
+  </div>
+</div>
+<div id="tfix" class="tc">
+  ${buildAutoFix(r)}
+</div>
+<div id="thdr" class="tc">
+  <div class="card" style="overflow:auto">
+    <table class="ctable">
+      <thead><tr><th>Header</th><th>Value</th></tr></thead>
+      <tbody>${Object.keys(r.allHdrs).length
+        ? Object.entries(r.allHdrs).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`<tr><td class="ct-n">${eh(k)}</td><td>${eh(v.length>200?v.substring(0,200)+'...':v)}</td></tr>`).join('')
+        : '<tr><td colspan="2" style="text-align:center;color:var(--gray);padding:1.5rem">proxy may have stripped headers — use curl or browser devtools for full header list</td></tr>'}</tbody>
+    </table>
+  </div>
+</div>
+`;
+
+  document.getElementById('scan-btn').disabled = false;
+  setTimeout(() => {
+    const C2 = 2 * Math.PI * 52;
+    document.getElementById('rfl').style.strokeDashoffset = C2 * (1 - r.score / 100);
+    animNum('scnt', 0, r.score, 1300);
+  }, 200);
+
+  const bars = document.querySelectorAll('.bc-fill');
+  setTimeout(() => { bars.forEach(b => { b.style.width = b.dataset.w + '%'; }); }, 350);
+}
+
+function buildBar(lbl, val, color) {
+  const max = 20;
+  const pct = Math.min(100, Math.round((val / max) * 100));
+  return `<div class="bc-row">
+    <div class="bc-label">${lbl}</div>
+    <div class="bc-track"><div class="bc-fill" data-w="${pct}" style="background:${color};width:0%;box-shadow:0 0 6px ${color}66"></div></div>
+    <div class="bc-val">${val}</div>
+  </div>`;
+}
+
+function dnsRow(name, val) {
+  let status, cls, display;
+  if (val === null) { status = 'lookup error'; cls = 'ds-bad'; display = 'DNS lookup failed'; }
+  else if (val === '') { status = 'MISSING'; cls = 'ds-bad'; display = 'not found — ' + (name==='SPF'?'email spoofing risk!':'phishing risk!'); }
+  else { status = 'found ✓'; cls = 'ds-ok'; display = val.length > 80 ? val.substring(0, 80) + '...' : val; }
+  return `<div class="dns-row"><div class="dns-name">${name}</div><div class="dns-val">${eh(display)}</div><div class="dns-stat ${cls}">${status}</div></div>`;
+}
+
+function buildAutoFix(r) {
+  const nginx = [], apache = [], express = [];
+  const hasPass = (str) => r.findings.some(f => f.sev === 'pass' && f.title.toLowerCase().includes(str.toLowerCase()));
+
+  if (!hasPass('HSTS')) {
+    nginx.push('add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;');
+    apache.push('Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"');
+    express.push("app.use(helmet.hsts({maxAge:31536000,includeSubDomains:true,preload:true}));");
+  }
+  if (!hasPass('CSP') && !hasPass('Content-Security')) {
+    nginx.push("add_header Content-Security-Policy \"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none';\" always;");
+    apache.push("Header always set Content-Security-Policy \"default-src 'self'; frame-ancestors 'none'\"");
+    express.push("app.use(helmet.contentSecurityPolicy({directives:{defaultSrc:[\"'self'\"],frameAncestors:[\"'none'\"]}}));");
+  }
+  if (!hasPass('X-Frame') && !hasPass('frame')) {
+    nginx.push('add_header X-Frame-Options "DENY" always;');
+    apache.push('Header always set X-Frame-Options "DENY"');
+    express.push("app.use(helmet.frameguard({action:'deny'}));");
+  }
+  if (!hasPass('X-Content-Type') && !hasPass('nosniff')) {
+    nginx.push('add_header X-Content-Type-Options "nosniff" always;');
+    apache.push('Header always set X-Content-Type-Options "nosniff"');
+    express.push("app.use(helmet.noSniff());");
+  }
+  if (!hasPass('Referrer')) {
+    nginx.push('add_header Referrer-Policy "strict-origin-when-cross-origin" always;');
+    apache.push('Header always set Referrer-Policy "strict-origin-when-cross-origin"');
+    express.push("app.use(helmet.referrerPolicy({policy:'strict-origin-when-cross-origin'}));");
+  }
+  if (!hasPass('Permissions')) {
+    nginx.push('add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;');
+    apache.push('Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"');
+    express.push("res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');");
+  }
+  if (!hasPass('COEP')) {
+    nginx.push('add_header Cross-Origin-Embedder-Policy "require-corp" always;');
+    apache.push('Header always set Cross-Origin-Embedder-Policy "require-corp"');
+    express.push("app.use((req,res,next)=>{res.setHeader('Cross-Origin-Embedder-Policy','require-corp');next();});");
+  }
+  if (!hasPass('COOP')) {
+    nginx.push('add_header Cross-Origin-Opener-Policy "same-origin" always;');
+    apache.push('Header always set Cross-Origin-Opener-Policy "same-origin"');
+    express.push("app.use((req,res,next)=>{res.setHeader('Cross-Origin-Opener-Policy','same-origin');next();});");
+  }
+  nginx.push('server_tokens off;');
+
+  if (!nginx.length && !express.length) {
+    return '<p style="color:#00c864;padding:1.5rem;text-align:center">🎉 your config looks solid! nothing critical to auto-fix.</p>';
+  }
+
+  return `
+<div class="fix-section"><div class="fix-header"><div class="fix-title">nginx.conf</div><button class="btn-sec" onclick="cp('fix-ng')">copy</button></div><div class="fix-code" id="fix-ng">${eh(nginx.join('\n'))}</div></div>
+<div class="fix-section"><div class="fix-header"><div class="fix-title">.htaccess (Apache)</div><button class="btn-sec" onclick="cp('fix-ap')">copy</button></div><div class="fix-code" id="fix-ap">${eh(['<IfModule mod_headers.c>', ...apache, '</IfModule>'].join('\n'))}</div></div>
+<div class="fix-section"><div class="fix-header"><div class="fix-title">Express.js (Node)</div><button class="btn-sec" onclick="cp('fix-ex')">copy</button></div><div class="fix-code" id="fix-ex">${eh(['// npm install helmet', "const helmet = require('helmet');", '', ...express].join('\n'))}</div></div>`;
+}
+
+function fcard(f) {
+  const smap = {critical:'sc',high:'sh',medium:'sm',low:'sl',info:'si',pass:'sp'};
+  const lmap = {critical:'lc',high:'lh',medium:'lm',low:'ll',info:'li',pass:'lp'};
+  return `<div class="fnd" onclick="this.classList.toggle('open')">
+<div class="fh"><div class="sb ${smap[f.sev]}"></div><div class="ft">${eh(f.title)}</div><span class="sl2 ${lmap[f.sev]}">${f.sev.toUpperCase()}</span><span class="chev">▾</span></div>
+${f.desc ? `<div class="fb"><p class="fd">${eh(f.desc)}</p>${f.value && f.value !== 'MISSING' && f.value !== 'absent' && f.value !== 'missing' ? `<div class="fl">current value</div><div class="fv">${eh(f.value)}</div>` : ''}${f.fix && f.sev !== 'pass' ? `<div class="fl">how to fix</div><div class="ff"><strong>fix:</strong> ${f.fix}</div>` : ''}</div>` : ''}
+</div>`;
+}
+
+function st(btn, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('act'));
+  document.querySelectorAll('.tc').forEach(t => t.classList.remove('act'));
+  btn.classList.add('act');
+  document.getElementById(id).classList.add('act');
+}
+
+function animNum(id, from, to, dur) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const s = performance.now();
+  function step(ts) {
+    const p = Math.min((ts - s) / dur, 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (to - from) * e);
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = to;
+  }
+  requestAnimationFrame(step);
+}
+
+function saveHistory(r) {
+  scanHistory.unshift({ url:r.url, hn:r.hn, score:r.score, grade:r.grade, gradeColor:r.gradeColor, ts:r.ts, crit:r.crit, high:r.high });
+  if (scanHistory.length > 10) scanHistory.pop();
+}
+
+function renderHistory() {
+  const el = document.getElementById('hist-wrap');
+  if (!scanHistory.length) { el.innerHTML = '<p style="color:var(--gray);font-size:.85rem">no scans yet.</p>'; return; }
+  el.innerHTML = `<div class="hist-list">${scanHistory.map((h) => `
+<div class="hist-item" onclick="reScanURL('${eh(h.url)}')">
+  <div class="hist-grade" style="background:${h.gradeColor}22;color:${h.gradeColor}">${h.grade}</div>
+  <div class="hist-info">
+    <div class="hist-url">${eh(h.hn)}</div>
+    <div class="hist-time">${new Date(h.ts).toLocaleString()} · ${h.crit} critical, ${h.high} high</div>
+  </div>
+  <div class="hist-score" style="color:${h.gradeColor}">${h.score}</div>
+</div>`).join('')}</div>`;
+}
+
+function reScanURL(url) {
+  document.getElementById('url-in').value = url;
+  gs('scan-sec');
+  setTimeout(startScan, 300);
+}
+
+function exportJSON() {
+  if (!lastReport) return;
+  const d = JSON.stringify({
+    url: lastReport.url,
+    score: lastReport.score,
+    grade: lastReport.grade,
+    scannedAt: lastReport.ts,
+    summary: lastReport.summary,
+    counts: { critical:lastReport.crit, high:lastReport.high, medium:lastReport.med, low:lastReport.low, passing:lastReport.pass },
+    findings: lastReport.findings.map(f => ({ title:f.title, severity:f.sev, category:f.cat, description:f.desc, fix:f.fix?f.fix.replace(/<[^>]+>/g,''):'' })),
+    tech: lastReport.tech,
+    dns: { spf: lastReport.dns.spf, dmarc: lastReport.dns.dmarc }
+  }, null, 2);
+  dl('poopsec-report.json', d, 'application/json');
+}
+
+function exportText() {
+  if (!lastReport) return;
+  const r = lastReport;
+  let t = `poopSec Security Report\n${'═'.repeat(50)}\nURL: ${r.url}\nScore: ${r.score}/100  Grade: ${r.grade}\nScanned: ${new Date(r.ts).toLocaleString()}\nSummary: ${r.summary}\n\nFINDING COUNTS\n${'─'.repeat(30)}\nCritical: ${r.crit}  |  High: ${r.high}  |  Medium: ${r.med}  |  Low: ${r.low}  |  Passing: ${r.pass}\n\nISSUES\n${'─'.repeat(30)}\n`;
+  r.findings.filter(f => f.sev !== 'pass').forEach(f => {
+    t += `\n[${f.sev.toUpperCase()}] ${f.title}\n  ${f.desc}\n${f.fix ? '  Fix: ' + f.fix.replace(/<[^>]+>/g,'') + '\n' : ''}`;
+  });
+  t += `\n\nPASSING CHECKS\n${'─'.repeat(30)}\n`;
+  r.findings.filter(f => f.sev === 'pass').forEach(f => { t += `[PASS] ${f.title}\n`; });
+  t += `\n\nTECH STACK\n${'─'.repeat(30)}\n`;
+  r.tech.forEach(t2 => { t += `${t2.name} (${t2.cat})\n`; });
+  dl('poopsec-report.txt', t, 'text/plain');
+}
+
+function dl(name, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type}));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+function copyURL() {
+  if (!lastReport) return;
+  navigator.clipboard.writeText(lastReport.url).then(() => {
+    const btns = document.querySelectorAll('.action-row .btn-sec');
+    btns.forEach(b => { if (b.textContent.includes('Copy URL')) { b.textContent = '✓ Copied!'; setTimeout(() => { b.textContent = '🔗 Copy URL'; }, 2000); } });
+  });
+}
+
+function cp(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const b = el.previousElementSibling?.querySelector('button');
+    if (b) { b.textContent = '✓ copied'; setTimeout(() => { b.textContent = 'copy'; }, 1800); }
+  });
+}
+
+function showErr(m) {
+  document.getElementById('err-wrap').innerHTML = `<div class="err-box"><span style="color:var(--red);flex-shrink:0">⚠</span><span>${eh(m)}</span></div>`;
+}
+function clearErr() { document.getElementById('err-wrap').innerHTML = ''; }
+
+document.getElementById('url-in').addEventListener('keydown', e => { if (e.key === 'Enter') startScan(); });
+</script>
+</body>
+</html>
